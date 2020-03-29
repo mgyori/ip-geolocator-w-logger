@@ -10,6 +10,9 @@ import com.google.common.net.UrlEscapers;
 
 import org.apache.commons.io.IOUtils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Class for obtaining geolocation information about an IP address or host
  * name. The class uses the <a href="http://ip-api.com/">IP-API.com</a>
@@ -24,10 +27,15 @@ public class GeoLocator {
 
     private static Gson GSON = new Gson();
 
+    private static Logger logger;
+
     /**
      * Creates a <code>GeoLocator</code> object.
      */
-    public GeoLocator() {}
+    public GeoLocator() {
+        logger = LoggerFactory.getLogger(this.getClass());
+        logger.trace("allocated new {} class", this.getClass().getName());
+    }
 
     /**
      * Returns geolocation information about the JVM running the application.
@@ -49,23 +57,31 @@ public class GeoLocator {
      * @throws IOException if any I/O error occurs
      */
     public GeoLocation getGeoLocation(String ipAddrOrHost) throws IOException {
+        logger.trace("invoke {} function", Thread.currentThread().getStackTrace()[1].getMethodName());
+        logger.debug("getGeoLocation input string is {}", ipAddrOrHost);
+
         URL url;
         if (ipAddrOrHost != null) {
             ipAddrOrHost = UrlEscapers.urlPathSegmentEscaper().escape(ipAddrOrHost);
             url = new URL(GEOLOCATOR_SERVICE_URI + ipAddrOrHost);
+            logger.debug("input is not null so url is {}", url.toString());
         } else {
             url = new URL(GEOLOCATOR_SERVICE_URI);
+            logger.debug("input is null so url is {}", url.toString());
         }
         String s = IOUtils.toString(url, "UTF-8");
+        logger.debug("Response {}", s);
         return GSON.fromJson(s, GeoLocation.class);
     }
 
     public static void main(String[] args) throws IOException {
         try {
             String arg = args.length > 0 ? args[0] : null;
-            System.out.println(new GeoLocator().getGeoLocation(arg));
+            GeoLocation loc = new GeoLocator().getGeoLocation(arg);
+            logger.info(loc.toString());
+            System.out.println(loc);
         } catch (IOException e) {
-            System.err.println(e.getMessage());
+            logger.error(e.getMessage());
         }
     }
 
